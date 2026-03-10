@@ -8,8 +8,14 @@ export const redis = REDIS_URL
 
 const CONNECT_TIMEOUT_MS = 5000;
 
+/**
+ * Connects the Redis client with a timeout guard. No-ops if REDIS_URL is unset.
+ * Logs an error event on the client rather than throwing on connection drops.
+ */
 export async function initRedis() {
-  if (!redis) return;
+  if (!redis) {
+    return;
+  }
 
   redis.on("error", (err) => {
     console.error("Redis client error:", err);

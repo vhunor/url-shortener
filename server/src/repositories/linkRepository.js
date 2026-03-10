@@ -14,6 +14,7 @@ export class LinkRepository {
    */
   async createLink(longUrl) {
     const client = await this.pool.connect();
+
     try {
       await client.query("BEGIN ISOLATION LEVEL READ COMMITTED");
 
@@ -33,7 +34,10 @@ export class LinkRepository {
 
       return { code, longUrl, createdAt, clicks: Number(clicks) };
     } catch (err) {
-      try { await client.query("ROLLBACK"); } catch {}
+      try {
+        await client.query("ROLLBACK");
+      } catch {}
+
       throw err;
     } finally {
       client.release();
@@ -48,9 +52,13 @@ export class LinkRepository {
       "SELECT code, long_url, clicks, created_at FROM links WHERE code = $1",
       [code]
     );
-    if (result.rowCount === 0) return null;
+
+    if (result.rowCount === 0) {
+      return null;
+    }
 
     const row = result.rows[0];
+
     return {
       code: row.code,
       longUrl: row.long_url,
@@ -67,7 +75,11 @@ export class LinkRepository {
       "SELECT long_url FROM links WHERE code = $1",
       [code]
     );
-    if (result.rowCount === 0) return null;
+
+    if (result.rowCount === 0) {
+      return null;
+    }
+
     return result.rows[0].long_url;
   }
 
@@ -87,6 +99,7 @@ export class LinkRepository {
       "SELECT code, long_url, clicks, created_at FROM links ORDER BY created_at DESC LIMIT $1",
       [safeLimit]
     );
+
     return result.rows.map((row) => ({
       code: row.code,
       longUrl: row.long_url,
@@ -95,23 +108,29 @@ export class LinkRepository {
     }));
   }
 
+  /** Returns aggregate totals: { totalLinks, totalClicks } across all stored links. */
   async getStats() {
     const result = await this.pool.query(
       "SELECT COUNT(*)::bigint AS total_links, COALESCE(SUM(clicks), 0)::bigint AS total_clicks FROM links"
     );
 
     const row = result.rows[0];
+
     return {
       totalLinks: Number(row.total_links),
       totalClicks: Number(row.total_clicks)
     };
   }
 
+  /**
+   * Atomically adds delta to the click counter for a code; used by the batched ClickCounter flush.
+   * @param {string} code
+   * @param {number} delta - The number of clicks to add (may be > 1 from the in-memory buffer).
+   */
   async incrementClicksBy(code, delta) {
     await this.pool.query(
       "UPDATE links SET clicks = clicks + $2 WHERE code = $1",
       [code, delta]
     );
   }
-
 }

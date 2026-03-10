@@ -63,7 +63,9 @@ app.post("/api/shorten", async (req, res) => {
     if (err.code === "INVALID_URL") {
       return res.status(400).json({ error: "Invalid URL" });
     }
+
     console.error(JSON.stringify({ requestId: req.id, msg: "POST /api/shorten failed", error: err.message }));
+
     return res.status(500).json({ error: "Internal error" });
   }
 });
@@ -105,6 +107,7 @@ app.get("/:code([0-9a-zA-Z]+)", async (req, res) => {
   }
 });
 
+// List recent links; accepts optional ?limit query param (1–200, default 50)
 app.get("/api/links", async (req, res) => {
   const limit = Math.max(1, Math.min(200, Number(req.query.limit) || 50));
 
@@ -119,6 +122,7 @@ app.get("/api/links", async (req, res) => {
   }
 });
 
+// Aggregate stats: total links, total clicks, and live cache hit-ratio metrics
 app.get("/api/stats", async (req, res) => {
   try {
     const stats = await linkService.getStats();
@@ -157,8 +161,19 @@ process.on("SIGINT", async () => {
     console.error("Click flush error during shutdown:", err.message);
   }
 
-  try { await pool.end(); } catch (err) { console.error("DB pool close error:", err.message); }
-  try { if (redis) await redis.quit(); } catch (err) { console.error("Redis close error:", err.message); }
+  try {
+    await pool.end();
+  } catch (err) {
+    console.error("DB pool close error:", err.message);
+  }
+
+  try {
+    if (redis) {
+      await redis.quit();
+    }
+  } catch (err) {
+    console.error("Redis close error:", err.message);
+  }
 
   process.exit(0);
 });

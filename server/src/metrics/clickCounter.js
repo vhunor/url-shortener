@@ -13,6 +13,7 @@ export class ClickCounter {
     this._flushing = false;
   }
 
+  /** Starts the periodic flush interval. Safe to call multiple times. */
   start() {
     if (this._timer) {
       return;
@@ -22,6 +23,7 @@ export class ClickCounter {
     this._timer.unref?.();
   }
 
+  /** Stops the flush interval without draining the buffer. Call flush() afterward for a clean shutdown. */
   stop() {
     if (!this._timer) {
       return;
@@ -31,6 +33,7 @@ export class ClickCounter {
     this._timer = null;
   }
 
+  /** Increments the in-memory click count for a code; triggers an early flush if the buffer is full. */
   trackClick(code) {
     const current = this.buffer.get(code) || 0;
     this.buffer.set(code, current + 1);
@@ -41,6 +44,10 @@ export class ClickCounter {
     }
   }
 
+  /**
+   * Drains the in-memory click buffer to the database.
+   * Swaps buffers atomically so new clicks are not blocked; merges back on failure.
+   */
   async flush() {
     if (this._flushing) {
       return;

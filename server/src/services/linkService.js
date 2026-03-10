@@ -10,6 +10,10 @@ export class LinkService {
     this.inFlightLoads = new Map();
   }
 
+  /**
+   * Sanitizes and validates a URL string, prepending https:// if no scheme is present.
+   * @returns {string|null} The normalized URL, or null if invalid or private.
+   */
   normalizeUrl(input) {
     if (typeof input !== "string") {
       return null;
@@ -22,6 +26,7 @@ export class LinkService {
     }
 
     const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
     try {
       const u = new URL(withProto);
 
@@ -39,8 +44,13 @@ export class LinkService {
     }
   }
 
+  /**
+   * Returns true for loopback, RFC-1918, and link-local addresses (including cloud metadata endpoints).
+   * @param {string} hostname
+   */
   _isPrivateHost(hostname) {
     const h = hostname.toLowerCase();
+
     return (
       h === "localhost" ||
       h === "::1" ||
@@ -52,6 +62,10 @@ export class LinkService {
     );
   }
 
+  /**
+   * Validates and normalizes rawUrl, then persists a new short link.
+   * @throws {Error} With code "INVALID_URL" if the URL is rejected.
+   */
   async createShortLink(rawUrl) {
     const longUrl = this.normalizeUrl(rawUrl);
 
@@ -69,6 +83,10 @@ export class LinkService {
     return this.linkRepo.getLinkByCode(code);
   }
 
+  /**
+   * Resolves a short code to its long URL using a cache-first strategy with single-flight DB coalescing.
+   * @returns {Promise<string|null>} The long URL, or null if the code does not exist.
+   */
   async resolveRedirect(code) {
     // 1) cache first
     if (this.linkCache) {
@@ -97,7 +115,11 @@ export class LinkService {
     // 2) Single-flight: coalesce concurrent DB lookups for the same code
     if (this.inFlightLoads.has(code)) {
       const longUrl = await this.inFlightLoads.get(code);
-      if (longUrl) this.clickCounter?.trackClick(code);
+
+      if (longUrl) {
+        this.clickCounter?.trackClick(code);
+      }
+
       return longUrl;
     }
 
@@ -105,25 +127,35 @@ export class LinkService {
     this.inFlightLoads.set(code, load);
 
     let longUrl;
+
     try {
       longUrl = await load;
     } finally {
       this.inFlightLoads.delete(code);
     }
 
-    if (longUrl) this.clickCounter?.trackClick(code);
+    if (longUrl) {
+      this.clickCounter?.trackClick(code);
+    }
+
     return longUrl;
   }
 
+  /**
+   * Fetches the long URL from the database and populates the cache (positive or negative entry).
+   * @returns {Promise<string|null>}
+   */
   async _loadFromDb(code) {
     const longUrl = await this.linkRepo.getLongUrlByCode(code);
 
     if (!longUrl) {
       await this.linkCache?.setNotFound(code);
+
       return null;
     }
 
     await this.linkCache?.setFound(code, longUrl);
+
     return longUrl;
   }
 

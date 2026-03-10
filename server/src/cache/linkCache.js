@@ -8,6 +8,7 @@ export class LinkCache {
     this.redis = redis;
   }
 
+  /** @returns {string} The Redis key for a given short code. */
   key(code) {
     return `${KEY_PREFIX}${code}`;
   }
@@ -26,6 +27,7 @@ export class LinkCache {
     return this.redis.get(this.key(code));
   }
 
+  /** Stores the resolved long URL in cache with a positive TTL. */
   async setFound(code, longUrl, ttlSeconds = DEFAULT_TTL_SECONDS) {
     if (!this.redis) {
       return;
@@ -34,6 +36,7 @@ export class LinkCache {
     await this.redis.set(this.key(code), longUrl, { EX: ttlSeconds });
   }
 
+  /** Caches a negative result for a short-lived TTL to prevent DB hammering on unknown codes. */
   async setNotFound(code, ttlSeconds = NEGATIVE_TTL_SECONDS) {
     if (!this.redis) {
       return;
@@ -42,6 +45,7 @@ export class LinkCache {
     await this.redis.set(this.key(code), NOT_FOUND, { EX: ttlSeconds });
   }
 
+  /** Returns true if the cached value is the negative-cache sentinel rather than a real URL. */
   isNotFound(value) {
     return value === NOT_FOUND;
   }
