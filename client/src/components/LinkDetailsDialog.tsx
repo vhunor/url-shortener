@@ -5,11 +5,11 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { useClipboard } from "@/hooks/use-clipboard";
+} from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Separator } from "@/components/ui/Separator";
+import { useClipboard } from "@/hooks/useClipboard";
 import type { ShortLink } from "@/lib/types";
 import { format } from "date-fns";
 

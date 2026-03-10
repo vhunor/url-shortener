@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Copy, ExternalLink, Info, Loader2 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
 import { shortenUrl } from "@/lib/api";
-import { useClipboard } from "@/hooks/use-clipboard";
+import { useClipboard } from "@/hooks/useClipboard";
 import type { ShortenResponse } from "@/lib/types";
 
 const isValidUrl = (str: string) => {
@@ -47,7 +47,7 @@ export const ShortenForm = () => {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     form.handleSubmit();
   };
