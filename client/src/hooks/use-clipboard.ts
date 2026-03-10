@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 
-export function useClipboard() {
+export const useClipboard = () => {
   const copy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);

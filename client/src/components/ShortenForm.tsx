@@ -9,7 +9,7 @@ import { shortenUrl } from "@/lib/api";
 import { useClipboard } from "@/hooks/use-clipboard";
 import type { ShortenResponse } from "@/lib/types";
 
-function isValidUrl(str: string) {
+const isValidUrl = (str: string) => {
   try {
     const url = new URL(str);
     return url.protocol === "http:" || url.protocol === "https:";
@@ -18,7 +18,7 @@ function isValidUrl(str: string) {
   }
 }
 
-export function ShortenForm() {
+export const ShortenForm = () => {
   const queryClient = useQueryClient();
   const { copy } = useClipboard();
   const [url, setUrl] = useState("");

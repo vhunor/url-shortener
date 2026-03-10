@@ -10,7 +10,7 @@ interface SystemHealthProps {
   isLoading: boolean;
 }
 
-function StatusBadge({ status, goodValues }: { status: string; goodValues: string[] }) {
+const StatusBadge = ({ status, goodValues }: { status: string; goodValues: string[] }) => {
   const isGood = goodValues.includes(status);
   return (
     <Badge variant={isGood ? "secondary" : "destructive"} className="text-xs capitalize">
@@ -19,7 +19,7 @@ function StatusBadge({ status, goodValues }: { status: string; goodValues: strin
   );
 }
 
-export function SystemHealth({ health, isLoading }: SystemHealthProps) {
+export const SystemHealth = ({ health, isLoading }: SystemHealthProps) => {
   const items = health
     ? [
         { icon: Activity, label: "API", value: health.api, goodValues: ["healthy"] },

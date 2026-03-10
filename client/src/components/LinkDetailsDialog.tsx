@@ -19,7 +19,7 @@ interface LinkDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function LinkDetailsDialog({ link, open, onOpenChange }: LinkDetailsDialogProps) {
+export const LinkDetailsDialog = ({ link, open, onOpenChange }: LinkDetailsDialogProps) => {
   const { copy } = useClipboard();
   if (!link) return null;
 

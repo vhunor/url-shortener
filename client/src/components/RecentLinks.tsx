@@ -14,12 +14,12 @@ interface RecentLinksProps {
   onViewDetails: (link: ShortLink) => void;
 }
 
-function truncateUrl(url: string, max = 50) {
+const truncateUrl = (url: string, max = 50) => {
   return url.length > max ? url.substring(0, max) + "…" : url;
 }
 
 // Mobile card view
-function LinkCard({ link, onViewDetails }: { link: ShortLink; onViewDetails: (link: ShortLink) => void }) {
+const LinkCard = ({ link, onViewDetails }: { link: ShortLink; onViewDetails: (link: ShortLink) => void }) => {
   const { copy } = useClipboard();
 
   return (
@@ -51,7 +51,7 @@ function LinkCard({ link, onViewDetails }: { link: ShortLink; onViewDetails: (li
   );
 }
 
-export function RecentLinks({ links, isLoading, onViewDetails }: RecentLinksProps) {
+export const RecentLinks = ({ links, isLoading, onViewDetails }: RecentLinksProps) => {
   const { copy } = useClipboard();
   return (
     <Card>
