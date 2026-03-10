@@ -33,3 +33,14 @@ services:
     depends_on:
       - postgres
       - redis
+
+  client:
+    image: node:20
+    working_dir: /app
+    volumes:
+      - ./client:/app
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
