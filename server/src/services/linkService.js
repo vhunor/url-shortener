@@ -7,6 +7,7 @@ export class LinkService {
     this.linkCache = linkCache;
     this.clickCounter = clickCounter;
     this.cacheMetrics = cacheMetrics;
+    this.inFlightLoads = new Map();
   }
 
   normalizeUrl(input) {
@@ -72,21 +73,36 @@ export class LinkService {
       this.cacheMetrics?.miss();
     }
 
-    // 2) DB fallback
+    // 2) Single-flight: coalesce concurrent DB lookups for the same code
+    if (this.inFlightLoads.has(code)) {
+      const longUrl = await this.inFlightLoads.get(code);
+      if (longUrl) this.clickCounter?.trackClick(code);
+      return longUrl;
+    }
+
+    const load = this._loadFromDb(code);
+    this.inFlightLoads.set(code, load);
+
+    let longUrl;
+    try {
+      longUrl = await load;
+    } finally {
+      this.inFlightLoads.delete(code);
+    }
+
+    if (longUrl) this.clickCounter?.trackClick(code);
+    return longUrl;
+  }
+
+  async _loadFromDb(code) {
     const longUrl = await this.linkRepo.getLongUrlByCode(code);
 
     if (!longUrl) {
       await this.linkCache?.setNotFound(code);
-
       return null;
     }
 
-     // 3) populate cache
     await this.linkCache?.setFound(code, longUrl);
-
-    // 4) track click
-    this.clickCounter?.trackClick(code);
-
     return longUrl;
   }
 
