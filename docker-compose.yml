@@ -41,6 +41,6 @@ services:
       - ./client:/app
     command: sh -c "npm install && npm run dev"
     ports:
-      - "8080:8080"
+      - "5173:8080"
     depends_on:
       - api
