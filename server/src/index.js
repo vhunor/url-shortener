@@ -9,6 +9,7 @@ import { LinkRepository } from "./repositories/linkRepository.js";
 import { LinkService } from "./services/linkService.js";
 import { LinkCache } from "./cache/linkCache.js";
 import { ClickCounter } from "./metrics/clickCounter.js";
+import { RedisClickBuffer } from "./metrics/redisClickBuffer.js";
 import { CacheMetrics } from "./metrics/cacheMetrics.js";
 
 const app = express();
@@ -36,7 +37,10 @@ await initRedis().catch((err) => {
 const linkRepo = new LinkRepository(pool);
 const linkCache = redis ? new LinkCache(redis) : null;
 
-const clickCounter = new ClickCounter(linkRepo);
+const clickCounter = redis
+  ? new RedisClickBuffer(redis, linkRepo)
+  : new ClickCounter(linkRepo);
+
 clickCounter.start();
 
 const cacheMetrics = new CacheMetrics();
@@ -127,9 +131,12 @@ app.get("/api/stats", async (req, res) => {
   try {
     const stats = await linkService.getStats();
 
+    const clickMetrics = await clickCounter.metrics();
+
     return res.json({
       ...stats,
-      cache: cacheMetrics.snapshot()
+      cache: cacheMetrics.snapshot(),
+      clicks: clickMetrics
     });
   } catch (err) {
     console.error(JSON.stringify({ requestId: req.id, msg: "GET /api/stats failed", error: err.message }));

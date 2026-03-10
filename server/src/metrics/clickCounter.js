@@ -1,36 +1,17 @@
-export class ClickCounter {
+import { ClickBuffer } from "./clickBuffer.js";
+
+const FLUSH_INTERVAL_MS = 2000;
+
+export class ClickCounter extends ClickBuffer {
   /**
    * @param {{ incrementClicksBy(code: string, delta: number): Promise<void> }} linkRepo
    */
   constructor(linkRepo) {
+    super(FLUSH_INTERVAL_MS);
     this.linkRepo = linkRepo;
 
     this.buffer = new Map(); // code -> count
-    this.flushIntervalMs = 2000;
     this.maxBufferSize = 5000;
-
-    this._timer = null;
-    this._flushing = false;
-  }
-
-  /** Starts the periodic flush interval. Safe to call multiple times. */
-  start() {
-    if (this._timer) {
-      return;
-    }
-
-    this._timer = setInterval(() => this.flush().catch(() => {}), this.flushIntervalMs);
-    this._timer.unref?.();
-  }
-
-  /** Stops the flush interval without draining the buffer. Call flush() afterward for a clean shutdown. */
-  stop() {
-    if (!this._timer) {
-      return;
-    }
-
-    clearInterval(this._timer);
-    this._timer = null;
   }
 
   /** Increments the in-memory click count for a code; triggers an early flush if the buffer is full. */
@@ -42,6 +23,18 @@ export class ClickCounter {
     if (this.buffer.size >= this.maxBufferSize) {
       void this.flush();
     }
+  }
+
+  /**
+   * Returns pending and flushed click metrics (matches RedisClickBuffer interface).
+   * pendingCodes: number of distinct codes with buffered clicks.
+   * flushedTotal: not tracked for the in-memory implementation.
+   */
+  async metrics() {
+    return {
+      pendingCodes: this.buffer.size,
+      flushedTotal: 0
+    };
   }
 
   /**
@@ -63,16 +56,23 @@ export class ClickCounter {
     this.buffer = new Map();
 
     try {
-      for (const [code, delta] of snapshot.entries()) {
-        await this.linkRepo.incrementClicksBy(code, delta);
+      const entries = [...snapshot.entries()];
+      const results = await Promise.allSettled(
+        entries.map(([code, delta]) => this.linkRepo.incrementClicksBy(code, delta))
+      );
+
+      // Merge back any that failed
+      for (let i = 0; i < results.length; i++) {
+        if (results[i].status === "rejected") {
+          const [code, delta] = entries[i];
+          this.buffer.set(code, (this.buffer.get(code) || 0) + delta);
+        }
       }
-    } catch (err) {
-      // On failure, merge back (best effort)
-      for (const [code, delta] of snapshot.entries()) {
-        this.buffer.set(code, (this.buffer.get(code) || 0) + delta);
+
+      const failCount = results.filter((r) => r.status === "rejected").length;
+      if (failCount > 0) {
+        console.error(`ClickCounter flush: ${failCount} of ${entries.length} entries failed`);
       }
-      
-      console.error("ClickCounter flush failed:", err);
     } finally {
       this._flushing = false;
     }
