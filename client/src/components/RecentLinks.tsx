@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
+import { useClipboard } from "@/hooks/use-clipboard";
 import type { ShortLink } from "@/lib/types";
 import { format } from "date-fns";
 
@@ -18,13 +18,10 @@ function truncateUrl(url: string, max = 50) {
   return url.length > max ? url.substring(0, max) + "…" : url;
 }
 
-function copyToClipboard(text: string) {
-  navigator.clipboard.writeText(text);
-  toast.success("Copied to clipboard!");
-}
-
 // Mobile card view
 function LinkCard({ link, onViewDetails }: { link: ShortLink; onViewDetails: (link: ShortLink) => void }) {
+  const { copy } = useClipboard();
+
   return (
     <div className="rounded-lg border bg-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
@@ -37,7 +34,7 @@ function LinkCard({ link, onViewDetails }: { link: ShortLink; onViewDetails: (li
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">{format(new Date(link.createdAt), "MMM d, yyyy")}</span>
         <div className="flex gap-1">
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => copyToClipboard(link.shortUrl)}>
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => copy(link.shortUrl)}>
             <Copy className="h-3.5 w-3.5" />
           </Button>
           <Button size="icon" variant="ghost" className="h-7 w-7" asChild>
@@ -55,6 +52,7 @@ function LinkCard({ link, onViewDetails }: { link: ShortLink; onViewDetails: (li
 }
 
 export function RecentLinks({ links, isLoading, onViewDetails }: RecentLinksProps) {
+  const { copy } = useClipboard();
   return (
     <Card>
       <CardHeader>
@@ -101,7 +99,7 @@ export function RecentLinks({ links, isLoading, onViewDetails }: RecentLinksProp
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => copyToClipboard(link.shortUrl)} title="Copy short URL">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => copy(link.shortUrl)} title="Copy short URL">
                             <Copy className="h-3.5 w-3.5" />
                           </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="Open short URL">

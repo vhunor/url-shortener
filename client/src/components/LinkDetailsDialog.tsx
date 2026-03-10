@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
+import { useClipboard } from "@/hooks/use-clipboard";
 import type { ShortLink } from "@/lib/types";
 import { format } from "date-fns";
 
@@ -19,12 +19,8 @@ interface LinkDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function copyToClipboard(text: string) {
-  navigator.clipboard.writeText(text);
-  toast.success("Copied to clipboard!");
-}
-
 export function LinkDetailsDialog({ link, open, onOpenChange }: LinkDetailsDialogProps) {
+  const { copy } = useClipboard();
   if (!link) return null;
 
   return (
@@ -43,7 +39,7 @@ export function LinkDetailsDialog({ link, open, onOpenChange }: LinkDetailsDialo
             <p className="text-xs font-medium text-muted-foreground">Short URL</p>
             <div className="flex items-center gap-2">
               <p className="flex-1 text-sm font-medium text-primary break-all">{link.shortUrl}</p>
-              <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => copyToClipboard(link.shortUrl)}>
+              <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => copy(link.shortUrl)}>
                 <Copy className="h-3.5 w-3.5" />
               </Button>
               <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" asChild>

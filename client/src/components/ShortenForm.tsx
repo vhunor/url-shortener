@@ -1,15 +1,13 @@
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Copy, ExternalLink, Info, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { shortenUrl } from "@/lib/api";
+import { useClipboard } from "@/hooks/use-clipboard";
 import type { ShortenResponse } from "@/lib/types";
-
-interface ShortenFormProps {
-  onCreated?: () => void;
-}
 
 function isValidUrl(str: string) {
   try {
@@ -20,13 +18,28 @@ function isValidUrl(str: string) {
   }
 }
 
-export function ShortenForm({ onCreated }: ShortenFormProps) {
+export function ShortenForm() {
+  const queryClient = useQueryClient();
+  const { copy } = useClipboard();
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ShortenResponse | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const mutation = useMutation({
+    mutationFn: shortenUrl,
+    onSuccess: (data) => {
+      setResult(data);
+      setUrl("");
+      queryClient.invalidateQueries({ queryKey: ["links"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      toast.success("Short URL created successfully!");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to create short URL. Please try again.");
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setResult(null);
@@ -41,23 +54,7 @@ export function ShortenForm({ onCreated }: ShortenFormProps) {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const res = await shortenUrl(url.trim());
-      setResult(res);
-      setUrl("");
-      onCreated?.();
-      toast.success("Short URL created successfully!");
-    } catch {
-      toast.error("Failed to create short URL. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard!");
+    mutation.mutate(url.trim());
   };
 
   return (
@@ -77,12 +74,12 @@ export function ShortenForm({ onCreated }: ShortenFormProps) {
                 if (error) setError("");
               }}
               className={error ? "border-destructive" : ""}
-              disabled={isLoading}
+              disabled={mutation.isPending}
             />
             {error && <p className="mt-1.5 text-xs text-destructive">{error}</p>}
           </div>
-          <Button type="submit" disabled={isLoading} className="shrink-0">
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Shorten URL"}
+          <Button type="submit" disabled={mutation.isPending} className="shrink-0">
+            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Shorten URL"}
           </Button>
         </form>
 
@@ -94,7 +91,7 @@ export function ShortenForm({ onCreated }: ShortenFormProps) {
                 <p className="text-base font-semibold text-primary break-all">{result.shortUrl}</p>
               </div>
               <div className="flex gap-1 shrink-0">
-                <Button size="icon" variant="ghost" onClick={() => copyToClipboard(result.shortUrl)} title="Copy">
+                <Button size="icon" variant="ghost" onClick={() => copy(result.shortUrl)} title="Copy">
                   <Copy className="h-4 w-4" />
                 </Button>
                 <Button size="icon" variant="ghost" asChild title="Open">
