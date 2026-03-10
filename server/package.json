@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/index.js",
-    "test": "node --test test/api.test.js"
+    "test": "node --test test/api.test.js",
+    "test:unit": "node --test test/single-flight.test.js"
   },
   "dependencies": {
     "express": "^4.19.2",
