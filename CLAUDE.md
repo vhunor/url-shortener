@@ -10,7 +10,7 @@ All commands run from the `server/` directory unless noted otherwise.
 ```bash
 docker-compose up
 ```
-This starts Postgres (port 5433), Redis (port 6379), and the API (port 3001) with hot-reload.
+This starts Postgres (port 5433), Redis (port 6379), API (port 3001), and the React frontend (port 5173) with hot-reload.
 
 **Run API locally (requires external Postgres and Redis):**
 ```bash
@@ -60,6 +60,8 @@ The server is a Node.js/Express ESM app (`"type": "module"`) with three infrastr
 - `src/metrics/cacheMetrics.js` — In-process hit/miss counters, exposed via `GET /api/stats`
 - `src/base62.js` — Encodes numeric IDs to base62 short codes
 
+**Frontend** (`client/`): React + Vite + TypeScript. TanStack Query for data fetching, TanStack Form for forms, shadcn/ui + Tailwind for UI. API calls are proxied from Vite dev server to `http://api:3001`.
+
 **Environment variables:**
 - `DATABASE_URL` — Postgres connection string (required; fails fast at startup if absent)
 - `REDIS_URL` — Redis connection string (optional; disables caching if absent)
@@ -81,6 +83,13 @@ Index on `code` column for fast redirect lookups. Pool is configured with `max: 
 - Add a blank line before `return` statements in multi-line functions
 - Use `const` by default; `let` only when reassignment is needed
 - Prefer `async/await` over `.then()` chains
+
+**Syntax:**
+- Use arrow functions (`const foo = () => {}`) — never `function` declarations
+- Destructure objects and arrays: `const { code, longUrl } = link` not `link.code`, `link.longUrl`
+- Use spread syntax for object/array copying and merging: `{ ...defaults, ...overrides }`
+- Name event handlers with the `handle` prefix: `handleSubmit`, `handleClick`, `handleChange`
+- No `import * as X from '...'` — always use named or default imports
 
 **Documentation:**
 - Add a short JSDoc comment (`/** ... */`) to every new function or method
