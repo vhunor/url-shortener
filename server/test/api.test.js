@@ -3,10 +3,10 @@ import assert from "node:assert/strict";
 
 const BASE = process.env.API_URL ?? "http://localhost:3001";
 
-async function post(path, body) {
+async function post(path, body, extraHeaders = {}) {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...extraHeaders },
     body: JSON.stringify(body),
   });
   return { status: res.status, body: await res.json() };
@@ -46,14 +46,42 @@ describe("URL Shortener API", () => {
       assert.equal(body.longUrl, "https://example.com/");
     });
 
-    it("returns 500 for an invalid URL", async () => {
-      const { status } = await post("/api/shorten", { url: "not a url !!" });
-      assert.equal(status, 500);
+    it("returns 400 for an invalid URL", async () => {
+      const { status, body } = await post("/api/shorten", { url: "not a url !!" });
+      assert.equal(status, 400);
+      assert.ok(body.error);
     });
 
-    it("returns 500 when url is missing", async () => {
-      const { status } = await post("/api/shorten", {});
-      assert.equal(status, 500);
+    it("returns 400 when url is missing", async () => {
+      const { status, body } = await post("/api/shorten", {});
+      assert.equal(status, 400);
+      assert.ok(body.error);
+    });
+
+    it("returns 400 for a private/internal host", async () => {
+      const { status, body } = await post("/api/shorten", { url: "http://localhost/secret" });
+      assert.equal(status, 400);
+      assert.ok(body.error);
+    });
+
+    it("returns 400 when body is an array", async () => {
+      const res = await fetch(`${BASE}/api/shorten`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify([{ url: "https://example.com" }]),
+      });
+      const body = await res.json();
+      assert.equal(res.status, 400);
+      assert.ok(body.error);
+    });
+
+    it("returns 413 for an oversized body", async () => {
+      const res = await fetch(`${BASE}/api/shorten`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: "https://example.com", junk: "x".repeat(20_000) }),
+      });
+      assert.equal(res.status, 413);
     });
   });
 
@@ -99,6 +127,18 @@ describe("URL Shortener API", () => {
       const { status, body } = await get("/api/links?limit=2");
       assert.equal(status, 200);
       assert.ok(body.length <= 2);
+    });
+
+    it("clamps limit above 200 to 200", async () => {
+      const { status, body } = await get("/api/links?limit=9999");
+      assert.equal(status, 200);
+      assert.ok(body.length <= 200);
+    });
+
+    it("uses default limit for non-numeric values", async () => {
+      const { status, body } = await get("/api/links?limit=abc");
+      assert.equal(status, 200);
+      assert.ok(Array.isArray(body));
     });
   });
 

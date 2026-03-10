@@ -29,10 +29,27 @@ export class LinkService {
         return null;
       }
 
+      if (!process.env.ALLOW_PRIVATE_HOSTS && this._isPrivateHost(u.hostname)) {
+        return null;
+      }
+
       return u.toString();
     } catch {
       return null;
     }
+  }
+
+  _isPrivateHost(hostname) {
+    const h = hostname.toLowerCase();
+    return (
+      h === "localhost" ||
+      h === "::1" ||
+      /^127\./.test(h) ||
+      /^10\./.test(h) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
+      /^192\.168\./.test(h) ||
+      /^169\.254\./.test(h)  // link-local + AWS/GCP metadata
+    );
   }
 
   async createShortLink(rawUrl) {
@@ -55,22 +72,26 @@ export class LinkService {
   async resolveRedirect(code) {
     // 1) cache first
     if (this.linkCache) {
-      const cached = await this.linkCache.get(code);
+      try {
+        const cached = await this.linkCache.get(code);
 
-      if (cached) {
-        if (this.linkCache.isNotFound(cached)) {
-          this.cacheMetrics?.negativeHit();
+        if (cached) {
+          if (this.linkCache.isNotFound(cached)) {
+            this.cacheMetrics?.negativeHit();
 
-          return null; // fast miss
+            return null; // fast miss
+          }
+
+          this.cacheMetrics?.hit();
+          this.clickCounter?.trackClick(code);
+
+          return cached; // cached longUrl
         }
 
-        this.cacheMetrics?.hit();
-        this.clickCounter?.trackClick(code);
-
-        return cached; // cached longUrl
+        this.cacheMetrics?.miss();
+      } catch (err) {
+        console.error("Cache error, falling back to DB:", err);
       }
-
-      this.cacheMetrics?.miss();
     }
 
     // 2) Single-flight: coalesce concurrent DB lookups for the same code

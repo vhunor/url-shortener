@@ -6,6 +6,8 @@ export const redis = REDIS_URL
   ? createClient({ url: REDIS_URL })
   : null;
 
+const CONNECT_TIMEOUT_MS = 5000;
+
 export async function initRedis() {
   if (!redis) return;
 
@@ -13,6 +15,12 @@ export async function initRedis() {
     console.error("Redis client error:", err);
   });
 
-  await redis.connect();
+  await Promise.race([
+    redis.connect(),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Redis connection timeout")), CONNECT_TIMEOUT_MS)
+    )
+  ]);
+
   console.log("Connected to Redis");
 }

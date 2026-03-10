@@ -15,7 +15,7 @@ export class LinkRepository {
   async createLink(longUrl) {
     const client = await this.pool.connect();
     try {
-      await client.query("BEGIN");
+      await client.query("BEGIN ISOLATION LEVEL READ COMMITTED");
 
       // Insert with placeholder to get id
       const insert = await client.query(
