@@ -21,28 +21,32 @@ const truncateUrl = (url: string, max = 50) => {
 // Mobile card view
 const LinkCard = ({ link, onViewDetails }: { link: ShortLink; onViewDetails: (link: ShortLink) => void }) => {
   const { copy } = useClipboard();
+  const { code, shortUrl, originalUrl, clicks, createdAt } = link;
+
+  const handleCopy = () => copy(shortUrl);
+  const handleViewDetails = () => onViewDetails(link);
 
   return (
     <div className="rounded-lg border bg-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <span className="font-mono text-sm font-semibold text-primary">{link.code}</span>
-          <p className="mt-1 text-xs text-muted-foreground break-all">{truncateUrl(link.originalUrl, 60)}</p>
+          <span className="font-mono text-sm font-semibold text-primary">{code}</span>
+          <p className="mt-1 text-xs text-muted-foreground break-all">{truncateUrl(originalUrl, 60)}</p>
         </div>
-        <Badge variant="secondary" className="shrink-0 text-xs">{link.clicks} clicks</Badge>
+        <Badge variant="secondary" className="shrink-0 text-xs">{clicks} clicks</Badge>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">{format(new Date(link.createdAt), "MMM d, yyyy")}</span>
+        <span className="text-xs text-muted-foreground">{format(new Date(createdAt), "MMM d, yyyy")}</span>
         <div className="flex gap-1">
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => copy(link.shortUrl)}>
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleCopy}>
             <Copy className="h-3.5 w-3.5" />
           </Button>
           <Button size="icon" variant="ghost" className="h-7 w-7" asChild>
-            <a href={link.shortUrl} target="_blank" rel="noopener noreferrer">
+            <a href={shortUrl} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </Button>
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onViewDetails(link)}>
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleViewDetails}>
             <Eye className="h-3.5 w-3.5" />
           </Button>
         </div>

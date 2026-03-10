@@ -2,7 +2,7 @@ import type { ShortLink, Stats, HealthStatus, ShortenResponse } from "./types";
 
 const BASE_URL = "/api";
 
-export async function shortenUrl(url: string): Promise<ShortenResponse> {
+export const shortenUrl = async (url: string): Promise<ShortenResponse> => {
   const res = await fetch(`${BASE_URL}/shorten`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -14,16 +14,12 @@ export async function shortenUrl(url: string): Promise<ShortenResponse> {
     throw new Error(body.error ?? `HTTP ${res.status}`);
   }
 
-  const data = await res.json();
+  const { code, shortUrl, longUrl } = await res.json();
 
-  return {
-    code: data.code,
-    shortUrl: data.shortUrl,
-    originalUrl: data.longUrl,
-  };
-}
+  return { code, shortUrl, originalUrl: longUrl };
+};
 
-export async function fetchLinks(limit = 50): Promise<ShortLink[]> {
+export const fetchLinks = async (limit = 50): Promise<ShortLink[]> => {
   const res = await fetch(`${BASE_URL}/links?limit=${limit}`);
 
   if (!res.ok) {
@@ -33,16 +29,16 @@ export async function fetchLinks(limit = 50): Promise<ShortLink[]> {
   const data: Array<{ code: string; longUrl: string; clicks: number; createdAt: string }> =
     await res.json();
 
-  return data.map((item) => ({
-    code: item.code,
-    shortUrl: `${window.location.origin}/${item.code}`,
-    originalUrl: item.longUrl,
-    clicks: item.clicks,
-    createdAt: item.createdAt,
+  return data.map(({ code, longUrl, clicks, createdAt }) => ({
+    code,
+    shortUrl: `${window.location.origin}/${code}`,
+    originalUrl: longUrl,
+    clicks,
+    createdAt,
   }));
-}
+};
 
-export async function fetchLinkByCode(code: string): Promise<ShortLink | undefined> {
+export const fetchLinkByCode = async (code: string): Promise<ShortLink | undefined> => {
   const res = await fetch(`${BASE_URL}/links/${code}`);
 
   if (res.status === 404) {
@@ -53,38 +49,38 @@ export async function fetchLinkByCode(code: string): Promise<ShortLink | undefin
     throw new Error(`HTTP ${res.status}`);
   }
 
-  const item: { code: string; longUrl: string; clicks: number; createdAt: string } =
+  const { code: linkCode, longUrl, clicks, createdAt }: { code: string; longUrl: string; clicks: number; createdAt: string } =
     await res.json();
 
   return {
-    code: item.code,
-    shortUrl: `${window.location.origin}/${item.code}`,
-    originalUrl: item.longUrl,
-    clicks: item.clicks,
-    createdAt: item.createdAt,
+    code: linkCode,
+    shortUrl: `${window.location.origin}/${linkCode}`,
+    originalUrl: longUrl,
+    clicks,
+    createdAt,
   };
-}
+};
 
-export async function fetchStats(): Promise<Stats> {
+export const fetchStats = async (): Promise<Stats> => {
   const res = await fetch(`${BASE_URL}/stats`);
 
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`);
   }
 
-  const data = await res.json();
+  const { totalLinks, totalClicks, cache } = await res.json();
 
   return {
-    totalLinks: data.totalLinks,
-    totalClicks: data.totalClicks,
-    cacheHits: data.cache?.hits ?? 0,
-    cacheMisses: data.cache?.misses ?? 0,
-    cacheHitRatio: data.cache?.hitRatio ?? 0,
-    negativeCacheHits: data.cache?.negativeHits ?? 0,
+    totalLinks,
+    totalClicks,
+    cacheHits: cache?.hits ?? 0,
+    cacheMisses: cache?.misses ?? 0,
+    cacheHitRatio: cache?.hitRatio ?? 0,
+    negativeCacheHits: cache?.negativeHits ?? 0,
   };
-}
+};
 
-export async function fetchHealth(): Promise<HealthStatus> {
+export const fetchHealth = async (): Promise<HealthStatus> => {
   const res = await fetch("/health");
 
   return {
@@ -93,4 +89,4 @@ export async function fetchHealth(): Promise<HealthStatus> {
     rateLimit: "active",
     lastChecked: new Date().toISOString(),
   };
-}
+};

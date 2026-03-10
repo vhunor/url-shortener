@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Copy, ExternalLink, Info, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,20 +17,19 @@ const isValidUrl = (str: string) => {
   } catch {
     return false;
   }
-}
+};
 
 export const ShortenForm = () => {
   const queryClient = useQueryClient();
   const { copy } = useClipboard();
-  const [url, setUrl] = useState("");
-  const [error, setError] = useState("");
   const [result, setResult] = useState<ShortenResponse | null>(null);
 
   const mutation = useMutation({
     mutationFn: shortenUrl,
     onSuccess: (data) => {
-      setResult(data);
-      setUrl("");
+      const { code, shortUrl, originalUrl } = data;
+      setResult({ code, shortUrl, originalUrl });
+      form.reset();
       queryClient.invalidateQueries({ queryKey: ["links"] });
       queryClient.invalidateQueries({ queryKey: ["stats"] });
       toast.success("Short URL created successfully!");
@@ -39,22 +39,17 @@ export const ShortenForm = () => {
     },
   });
 
+  const form = useForm({
+    defaultValues: { url: "" },
+    onSubmit: ({ value }) => {
+      setResult(null);
+      mutation.mutate(value.url.trim());
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setResult(null);
-
-    if (!url.trim()) {
-      setError("Please enter a URL");
-      return;
-    }
-
-    if (!isValidUrl(url.trim())) {
-      setError("Please enter a valid URL (including http:// or https://)");
-      return;
-    }
-
-    mutation.mutate(url.trim());
+    form.handleSubmit();
   };
 
   return (
@@ -64,19 +59,36 @@ export const ShortenForm = () => {
         <CardDescription>Paste a long URL to generate a short, shareable link</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <form onSubmit={handleSubmit} className="flex gap-2">
+        <form
+          onSubmit={handleSubmit}
+          className="flex gap-2"
+        >
           <div className="flex-1">
-            <Input
-              placeholder="https://example.com/very/long/url..."
-              value={url}
-              onChange={(e) => {
-                setUrl(e.target.value);
-                if (error) setError("");
+            <form.Field
+              name="url"
+              validators={{
+                onSubmit: ({ value }) => {
+                  if (!value.trim()) return "Please enter a URL";
+                  if (!isValidUrl(value.trim())) return "Please enter a valid URL (including http:// or https://)";
+                },
               }}
-              className={error ? "border-destructive" : ""}
-              disabled={mutation.isPending}
-            />
-            {error && <p className="mt-1.5 text-xs text-destructive">{error}</p>}
+            >
+              {(field) => (
+                <>
+                  <Input
+                    placeholder="https://example.com/very/long/url..."
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    className={field.state.meta.errors.length ? "border-destructive" : ""}
+                    disabled={mutation.isPending}
+                  />
+                  {field.state.meta.errors.length > 0 && (
+                    <p className="mt-1.5 text-xs text-destructive">{field.state.meta.errors[0]}</p>
+                  )}
+                </>
+              )}
+            </form.Field>
           </div>
           <Button type="submit" disabled={mutation.isPending} className="shrink-0">
             {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Shorten URL"}
@@ -114,4 +126,4 @@ export const ShortenForm = () => {
       </CardContent>
     </Card>
   );
-}
+};
